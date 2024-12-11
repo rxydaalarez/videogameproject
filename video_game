@@ -357,7 +357,7 @@ def main():
         # Summarize the conversation history if it gets too long
         if len(conversation_history) > 5:
             history_to_summarize = "\n".join(conversation_history[:-5])
-            past_events_context = summarize_history(history_to_summarize)
+            past_events_context = get_response_from_llm("summarize the following history", history_to_summarize)
             conversation_history = conversation_history[-5:]
         
         context = base_context + changing_context + "\n" + past_events_context + "\n" + "\n".join(conversation_history)
