@@ -531,7 +531,7 @@ def main():
                     if count == 3:
                         print("""You have played for too long by yourself. Please get off. """)
                         time.sleep(2)
-                        print("________________________________________________________________")
+                        print("______________________________")
                         time.sleep(1)
                         print("""Hi, thanks for playing. I hope you enjoyed playing my game. While games can be amazing and imagination-provoking, 
                             friendship-building tools that allow us to have fun and connect with others, playing too much can cause great harm 
