@@ -43,162 +43,59 @@ skill_caps = {
     "Heart of the Mountain": 10
 }
 
-# def level_up_skill(input_string):
-#     """
-#     Searches the input string for a skill level up pattern and increments the respective skill level.
-
-#     Parameters:
-#     input_string (str): The string to search for the skill level up pattern.
-
-#     Returns:
-#     str: The updated skill levels.
-#     """
-#     pattern = r"Skill Level Up: ([A-Za-z ]+)"
-#     match = re.search(pattern, input_string)
-
-#     if match:
-#         skill = match.group(1).strip()
-#         if skill in skills:
-#             if skills[skill] < skill_caps[skill]:
-#                 skills[skill] += 1
-#                 return f"{skill} leveled up to {skills[skill]}! Good job, Continue leveling!"
-#             else:
-#                 return f"{skill} is already at max level ({skill_caps[skill]})."
-#         else:
-#             return f"Skill '{skill}' not recognized."
-#     else:
-#         return "No skill level up detected."
-
-# def level_up_skill(input_string):
-#     """
-#     Detects level-up events in any format, determines the skill category, and updates the skill level.
-
-#     Parameters:
-#     input_string (str): The input text to parse for level-up events.
-
-#     Returns:
-#     str: A message summarizing the skill level-ups detected and updated.
-#     """
-#     # Regex to capture any "Level Up" variation and associated skill/level
-#     pattern = r"(?:Skill|[A-Za-z ]+Level)\s*Up:?\s*([A-Za-z ]+)\s+(\d+)!*"
-#     matches = re.findall(pattern, input_string)
-
-#     if matches:
-#         results = []
-#         for skill, level in matches:
-#             skill = skill.strip()
-#             level = int(level)
-#             if skill in skills:
-#                 if level > skills[skill]:  # Update only if the new level is higher
-#                     skills[skill] = level
-#                     results.append(f"{skill} leveled up to level {level}!")
-#                 else:
-#                     results.append(f"{skill} is already at level {skills[skill]} or higher.")
-#             else:
-#                 results.append(f"Skill '{skill}' not recognized.")
-#         return "\n".join(results)
-#     else:
-#         return "No level-up detected."
 
 def level_up_skill(input_string):
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
     model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "Analyze the following passage and identify any skill-level changes that occur. Return the results in the format 'SKILL: SKILL LEVEL' for each skill that leveled up. if no skill leveled up return null."},
-        {"role": "user", "content": input_string}
-    ],
-    temperature=0.0
+    temperature=0.0,
+    messages= [
+        {
+            "role": "system",
+            "content": "Analyze the following passage and identify any skill-level changes that occur. Return the results in the format '[INSERT SKILL NAME]: [INSERT SKILL LEVEL]' for each skill that leveled up. if no skill leveled up return null. PASSAGE: "
+        },
+        {
+            "role": "user",
+            "content": input_string
+        }
+    ]
+    
 )
     response = response.choices[0].message.content.strip()
-    
-    if response.contains("null"):
+    print(response)
+    if "null" in response.lower():
         return
     
-    """
-    Detects level-up events from various messages and updates skill levels.
-    It handles formats like:
-    "Skill Level Up: Mining 3!"
-    "Mining Level Up: 7!"
-    "Combat Level Up: Combat 3"
-    "You've reached Mining Level 3."
-
-    Parameters:
-    input_string (str): The input text containing level-up events.
-
-    Returns:
-    str: A message summarizing the skill level-ups detected and updated.
-    """
-    # Pattern 1: "<Something> Level Up: <MaybeSkill> <Level>!"
-    # This can handle:
-    # - "Skill Level Up: Mining 3!"
-    # - "Mining Level Up: 7!"
-    # - "Combat Level Up: Combat 3"
-    pattern1 = r"([A-Za-z ]+) Level Up:\s*([A-Za-z ]+)?\s*(\d+)!?"
+        global skills  # Declare that we will use the global skills variable
+    update_string = response
+    lines = update_string.strip().split('\n')
     
-    # Pattern 2: "You've reached <Skill> Level <Level>."
-    # This handles lines like:
-    # - "You've reached Mining Level 3."
-    # - "You've reached Combat Level 5!"
-    # Note: The exclamation mark is optional, as it can appear in some contexts.
-    pattern2 = r"You've reached\s+([A-Za-z ]+)\s+Level\s+(\d+)[.!]?"
+    for line in lines:
+        if not line.strip():
+            continue
 
-    # Find matches for pattern1
-    matches1 = re.findall(pattern1, input_string, flags=re.IGNORECASE)
-    # Find matches for pattern2
-    matches2 = re.findall(pattern2, input_string, flags=re.IGNORECASE)
+        # Split skill name and level
+        skill_part, level_part = line.split(':', 1)
+        skill_name = skill_part.strip()
+        new_level_str = level_part.strip()
+
+        # Attempt to convert new level to integer
+        try:
+            new_level = int(new_level_str)
+        except ValueError:
+            continue
+
+        # Find the matching skill key ignoring case
+        matched_key = None
+        for key in skills:
+            if key.lower() == skill_name.lower():
+                matched_key = key
+                break
+
+        if matched_key is not None:
+            if (new_level <= skill_caps[matched_key]):
+                skills[matched_key] = new_level
+
     
-    results = []
-    
-    def update_skill(skill_name, new_level):
-        skill_name = skill_name.strip().title()  # Normalize skill name
-        if skill_name in skills:
-            current_level = skills[skill_name]
-            if new_level > current_level:
-                skills[skill_name] = new_level
-                results.append(f"{skill_name} leveled up to level {new_level}!")
-            else:
-                results.append(f"{skill_name} is already at level {current_level} or higher.")
-        else:
-            results.append(f"Unrecognized skill: {skill_name}")
-
-    # Process matches from pattern1
-    for g1, g2, lvl_str in matches1:
-        candidate1 = g1.strip().title() if g1 else None
-        candidate2 = g2.strip().title() if g2 else None
-        new_level = int(lvl_str)
-
-        # Determine which captured group is the skill name:
-        if candidate1 == "Skill":
-            # If the first group is "Skill", the second should be the actual skill.
-            if candidate2:
-                update_skill(candidate2, new_level)
-            else:
-                results.append("Could not determine the skill from the message.")
-        else:
-            # candidate1 might be a skill itself
-            if candidate1 in skills:
-                # If candidate2 is present and is a recognized skill, prefer candidate2.
-                if candidate2 and candidate2 in skills:
-                    update_skill(candidate2, new_level)
-                else:
-                    update_skill(candidate1, new_level)
-            else:
-                # candidate1 is not a skill, maybe candidate2 is.
-                if candidate2 and candidate2 in skills:
-                    update_skill(candidate2, new_level)
-                else:
-                    results.append("Could not determine the skill from the message.")
-
-    # Process matches from pattern2
-    for skill_name, lvl_str in matches2:
-        new_level = int(lvl_str)
-        update_skill(skill_name, new_level)
-
-    if not matches1 and not matches2:
-        return "No level-up detected."
-
-    return "\n".join(results)
-
 
 
 def print_status_screen():
@@ -478,7 +375,7 @@ def main():
         elif counter <=50:
             changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels."
         elif counter == 51:
-            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels." + " Mention that the player can stop playing if they wish, they just have to ask."
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels." + " Mention that the player can stop playing if they wish, they just have to ask to stop playing."
         else:
             changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels."
         if counter == 6:
