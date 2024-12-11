@@ -176,7 +176,7 @@ def main():
     base_context = (
         "You are a video game bot, you allow for users to interact with you and play the game specified."
         "below is an overview of the structure and content of the game that the player will be thrust into"
-        "your goal is to take user input and allow them to play the game through you"
+        "your goal is to take user input and allow them to play the game through you, though do not ask them to type commands as you are not minecraft and CANNOT ACCEPT MINECRAFT CHAT COMMANDS"
         f"""1. Private Island
         Connection: Starting point for every player; accessible via the /home command or portals from the Hub.
         Content:
