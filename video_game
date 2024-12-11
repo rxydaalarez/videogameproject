@@ -84,6 +84,7 @@ def level_up_skill(input_string):
     matches = re.findall(pattern, input_string)
 
     if matches:
+        print("my name is bob")
         results = []
         for skill, level in matches:
             skill = skill.strip()
