@@ -136,7 +136,7 @@ def clean_punctuation(strings):
     for s in strings:
         # Replace consecutive punctuation (e.g., ".." or ",,") with a single instance
         cleaned = re.sub(r'([.,!?;:])\1+', r'\1', s)
-        cleaned = re.sub('***', '', cleaned)
+        cleaned = re.sub(r'\*\*\*', '', cleaned)
         # Optionally, you can add space normalization around punctuation
         cleaned = re.sub(r'\s*([.,!?;:])\s*', r'\1 ', cleaned).strip()
         cleaned_strings.append(cleaned)
