@@ -446,6 +446,7 @@ def main():
             
             # Generate the next part of the game using LLM
             response = get_response_from_llm(context, player_input)
+            level_up_skill(response)
             print(response)
 
             # Update conversation history with player's input and LLM response for prompt chaining

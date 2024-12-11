@@ -95,5 +95,5 @@ def level_up_skill(input_string):
                 skills[matched_key] = new_level
 
 
-level_up_skill("you leveled up farming to 27!")
-print(skills["Farming"])
+level_up_skill("Skill Level Up: Mining 7! \nYou've reached Mining Level 7! Your hours of dedication have paid off, and you're ready to take on even more mining challenges. What's next on your agenda?")
+print(skills["Mining"])
