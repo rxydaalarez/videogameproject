@@ -43,31 +43,63 @@ skill_caps = {
     "Heart of the Mountain": 10
 }
 
+# def level_up_skill(input_string):
+#     """
+#     Searches the input string for a skill level up pattern and increments the respective skill level.
+
+#     Parameters:
+#     input_string (str): The string to search for the skill level up pattern.
+
+#     Returns:
+#     str: The updated skill levels.
+#     """
+#     pattern = r"Skill Level Up: ([A-Za-z ]+)"
+#     match = re.search(pattern, input_string)
+
+#     if match:
+#         skill = match.group(1).strip()
+#         if skill in skills:
+#             if skills[skill] < skill_caps[skill]:
+#                 skills[skill] += 1
+#                 return f"{skill} leveled up to {skills[skill]}! Good job, Continue leveling!"
+#             else:
+#                 return f"{skill} is already at max level ({skill_caps[skill]})."
+#         else:
+#             return f"Skill '{skill}' not recognized."
+#     else:
+#         return "No skill level up detected."
+
 def level_up_skill(input_string):
     """
-    Searches the input string for a skill level up pattern and increments the respective skill level.
+    Detects level-up events in any format, determines the skill category, and updates the skill level.
 
     Parameters:
-    input_string (str): The string to search for the skill level up pattern.
+    input_string (str): The input text to parse for level-up events.
 
     Returns:
-    str: The updated skill levels.
+    str: A message summarizing the skill level-ups detected and updated.
     """
-    pattern = r"Skill Level Up: ([A-Za-z ]+)"
-    match = re.search(pattern, input_string)
+    # Regex to capture any "Level Up" variation and associated skill/level
+    pattern = r"(?:Skill|Combat|[\w ]+ Level) Up:?\s*([A-Za-z ]+)\s*(\d+)[!]*"
+    matches = re.findall(pattern, input_string)
 
-    if match:
-        skill = match.group(1).strip()
-        if skill in skills:
-            if skills[skill] < skill_caps[skill]:
-                skills[skill] += 1
-                return f"{skill} leveled up to {skills[skill]}! Good job, Continue leveling!"
+    if matches:
+        results = []
+        for skill, level in matches:
+            skill = skill.strip()
+            level = int(level)
+            if skill in skills:
+                if level > skills[skill]:  # Update only if the new level is higher
+                    skills[skill] = level
+                    results.append(f"{skill} leveled up to level {level}!")
+                else:
+                    results.append(f"{skill} is already at level {skills[skill]} or higher.")
             else:
-                return f"{skill} is already at max level ({skill_caps[skill]})."
-        else:
-            return f"Skill '{skill}' not recognized."
+                results.append(f"Skill '{skill}' not recognized.")
+        return "\n".join(results)
     else:
-        return "No skill level up detected."
+        return "No level-up detected."
+
 
 
 def print_status_screen():
