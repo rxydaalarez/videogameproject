@@ -80,7 +80,7 @@ def level_up_skill(input_string):
     str: A message summarizing the skill level-ups detected and updated.
     """
     # Regex to capture any "Level Up" variation and associated skill/level
-    pattern = r"(?:Skill|Combat|[\w ]+ Level) Up:?\s*([A-Za-z ]+)\s*(\d+)[!]*"
+    pattern = r"(?:Skill|[A-Za-z ]+Level)\s*Up:?\s*([A-Za-z ]+)\s+(\d+)!*"
     matches = re.findall(pattern, input_string)
 
     if matches:
