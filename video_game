@@ -1,0 +1,427 @@
+import openai
+from openai import OpenAI
+import os
+from pydantic import BaseModel
+import re
+import time
+import difflib
+
+os.environ["OPENAI_API_KEY"] = "INSERT_KEY"
+
+client = OpenAI()
+#final
+counter = 0
+conversation_history = []
+past_events_context = ""
+non_abridged_convo_history = []
+non_abridged_summarized_history = []
+
+
+
+skills = {
+    "Mining": 1,
+    "Farming": 1,
+    "Combat": 1,
+    "Enchanting": 1,
+    "Dungeoneering": 1,
+    "Fishing": 1,
+    "Foraging": 1,
+    "Alchemy": 1,
+    "Heart of the Mountain": 1
+}
+
+# Skill level caps
+skill_caps = {
+    "Mining": 50,
+    "Farming": 50,
+    "Combat": 50,
+    "Enchanting": 50,
+    "Dungeoneering": 50,
+    "Fishing": 50,
+    "Foraging": 50,
+    "Alchemy": 50,
+    "Heart of the Mountain": 10
+}
+
+def level_up_skill(input_string):
+    """
+    Searches the input string for a skill level up pattern and increments the respective skill level.
+
+    Parameters:
+    input_string (str): The string to search for the skill level up pattern.
+
+    Returns:
+    str: The updated skill levels.
+    """
+    pattern = r"Skill Level Up: ([A-Za-z ]+)"
+    match = re.search(pattern, input_string)
+
+    if match:
+        skill = match.group(1).strip()
+        if skill in skills:
+            if skills[skill] < skill_caps[skill]:
+                skills[skill] += 1
+                return f"{skill} leveled up to {skills[skill]}! Good job, Continue leveling!"
+            else:
+                return f"{skill} is already at max level ({skill_caps[skill]})."
+        else:
+            return f"Skill '{skill}' not recognized."
+    else:
+        return "No skill level up detected."
+
+
+def print_status_screen():
+    print("\n============================")
+    print("        STATUS SCREEN        ")
+    print("============================")
+    print("Skills:")
+    for skill, level in skills.items():
+        print(f" - {skill}: Level {level}")
+    print("============================\n")
+
+def link(uri, label=None):
+    if label is None: 
+        label = uri
+    parameters = ''
+
+    # OSC 8 ; params ; URI ST <name> OSC 8 ;; ST 
+    escape_mask = '\033]8;{};{}\033\\{}\033]8;;\033\\'
+
+    return escape_mask.format(parameters, uri, label)
+
+
+
+def is_status_input(input_text):
+    # Define "status" as the target word
+    target = "skills"
+    # Use difflib to compare similarity, allowing minor variations
+    similarity = difflib.SequenceMatcher(None, input_text.lower(), target).ratio()
+    # Consider it a match if similarity is above 0.8 (you can adjust this threshold)
+    return similarity >= 0.8
+
+def get_response_from_llm(context, player_input):
+    # Combine context and player's input to create a prompt for the LLM
+
+
+    response = openai.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+            "role": "system",
+            "content": context
+        },
+        {
+            "role": "user",
+            "content": player_input
+        }
+    ]
+)
+
+    
+    response_dict = response.to_dict()
+    return response_dict["choices"][0]["message"]["content"]
+
+
+def clean_punctuation(strings):
+    """
+    Cleans repeated punctuation from a list of strings.
+    
+    Args:
+    strings (list): A list of strings to clean.
+    
+    Returns:
+    list: A new list with cleaned strings.
+    """
+    cleaned_strings = []
+    for s in strings:
+        # Replace consecutive punctuation (e.g., ".." or ",,") with a single instance
+        cleaned = re.sub(r'([.,!?;:])\1+', r'\1', s)
+        cleaned = re.sub('***', '', cleaned)
+        # Optionally, you can add space normalization around punctuation
+        cleaned = re.sub(r'\s*([.,!?;:])\s*', r'\1 ', cleaned).strip()
+        cleaned_strings.append(cleaned)
+    return cleaned_strings
+
+def summarize_history(history):
+    # Summarize the conversation history using the OpenAI API
+    prompt = f"Summarize the following events concisely:\n{history}"
+    response = openai.chat.completions.create(
+        engine="gpt-4o",
+        prompt=prompt,
+        n=1,
+        stop=None,
+        temperature=0.7,
+    )
+    return response["choices"][0]["message"]["content"]
+class ConversationHistory(BaseModel):
+    player_actions: str
+    
+def json_call(history):
+    # Summarize the conversation history using the OpenAI API
+    prompt = history
+    response = openai.chat.completions.create(
+        engine="gpt-4o",
+        prompt=prompt,
+        n=1,
+        stop=None,
+        temperature=0.7,
+        response_format=ConversationHistory
+
+    )
+    return response.choices[0].text.strip()
+
+def main():
+    global counter, conversation_history, past_events_context
+    # Base context of the game
+    base_context = (
+        "You are a video game bot, you allow for users to interact with you and play the game specified."
+        "below is an overview of the structure and content of the game that the player will be thrust into"
+        "your goal is to take user input and allow them to play the game through you"
+        f"""1. Private Island
+        Connection: Starting point for every player; accessible via the /home command or portals from the Hub.
+        Content:
+        Personal space for building and customization.
+        Placement of minions for resource generation.
+        Access to the Garden for advanced farming.
+        2. The Hub Island
+        Connection: Central hub connecting to all other islands through portals or NPCs.
+        Content:
+        Village: Shops, Auction House, Bank, and essential NPCs like the Banker, Auction Master, and Bazaar.
+        Farm Area: Entry point to the Farming Islands.
+        Coal Mine: Introductory mining area leading to the Gold Mine.
+        Graveyard: Low-level combat area with zombies; portal to Spider's Den.
+        Forest: Foraging area with access to The Park.
+        Colosseum: Previously for PvP (currently disabled).
+        Events: Portals appear during special events like the Spooky Festival and Season of Jerry.
+        3. The Farming Islands
+        The Barn
+        Connection: Portal located in the Hub's Farm Area.
+        Content:
+        Farming of basic crops: wheat, carrots, potatoes, melons, pumpkins, and sugar cane.
+        Animal mobs: cows, pigs, chickens, and sheep for farming resources.
+        Mushroom Desert
+        Connection: Beyond The Barn; accessible after unlocking farming levels.
+        Content:
+        Advanced farming resources: mushrooms, cactus, cocoa beans, and sugar cane.
+        Fishing spots and sand collection areas.
+        4. The Gold Mine
+        Connection: Accessible from the Coal Mine in the Hub.
+        Content:
+        Mining of coal, iron, and gold ores.
+        NPCs offering quests and upgrades, such as the Lazy Miner's quest.
+        Introduction to enchanting and basic reforging.
+        5. The Deep Caverns
+        Connection: Beyond the Gold Mine; requires Mining Level 5.
+        Content:
+        Gunpowder Mines: Iron and gold ores with Creeper mobs.
+        Lapis Quarry: Lapis Lazuli ores guarded by Lapis Zombies.
+        Pigman's Den: Redstone ores with hostile Redstone Pigmen.
+        Slimehill: Emerald ores with Slime mobs.
+        Diamond Reserve: Diamond ores protected by Skeletons.
+        Obsidian Sanctuary: Obsidian and diamond ores with powerful Zombies and Skeletons.
+        6. Dwarven Mines
+        Connection: Accessible via the Deep Caverns after completing a quest at Mining Level 12.
+        Content:
+        New ores: Mithril and Titanium.
+        Commissions: Daily tasks for experience and rewards.
+        Events: Participatory events like Raffle and Goblin Raid.
+        Heart of the Mountain: Skill tree unlocking mining abilities.
+        7. Crystal Hollows
+        Connection: Entered from the Dwarven Mines using a pass or fee.
+        Content:
+        Procedurally generated caves with Gemstones.
+        Crystal Nucleus: Central area for turning in collected crystals.
+        Unique structures: Goblin Holdout, Jungle Temple, Mines of Divan.
+        Mobs: Automaton, Bal, Worms, and more.
+        Gemstone Mining: For upgrading gear and selling for profit.
+        8. The Park
+        Connection: Portal located in the Hub's Forest area.
+        Content:
+        Zones for each type of wood: Birch, Spruce, Dark Oak, Acacia, and Jungle.
+        Quests: From NPCs like Gustav (Race) and the Melancholic Viking.
+        Foraging XP: Enhanced woodcutting experience.
+        9. Spider's Den
+        Connection: Portal in the Hub's Graveyard.
+        Content:
+        Spider mobs: Spiders, Splitter Spiders, and Silverfish.
+        Broodmother: Mini-boss spawning every hour.
+        Tarantula Boss: From Slayer quests.
+        Access to The End: Portal at the top after reaching Combat Level 12.
+        10. The End
+        Connection: From the top of Spider's Den.
+        Content:
+        Endermen: Varied levels for combat and Ender Pearl collection.
+        Dragon's Nest: Area for summoning and fighting Ender Dragons.
+        Zealots: Kill for a chance to obtain Summoning Eyes.
+        Obsidian Defenders and Watchers: Hostile mobs guarding the area.
+        Voidgloom Seraph: Slayer boss for high-level players.
+        11. Crimson Isle
+        Connection: Portal in the spider's den; requires Combat Level 24.
+        Content:
+        Factions: Choose between Mage or Barbarian with unique quests.
+        Kuudra Boss Fight: Massive boss requiring teamwork.
+        New Mobs: Including Blazes, Piglins, and Wither Skeletons.
+        Materials: For crafting and upgrading gear.
+        Mini-Bosses and Quests: For advanced combat challenges.
+        12. Jerry's Workshop
+        Connection: Seasonal portal in the Hub during the Season of Jerry event.
+        Content:
+        Gifts: Collecting presents scattered around the island.
+        Defend the Village: Event where players protect against Magma Cube waves.
+        Exclusive Rewards: Event-specific items and cosmetics.
+        13. Dungeon Hub
+        Connection: Portal in the Hub or via fast travel.
+        Content:
+        Access point for all Dungeon activities.
+        Dungeon NPCs: Mort and others for starting Dungeon runs.
+        Training Area: For practicing abilities.
+        Leaderboards and class selection.
+        14. The Catacombs (Dungeons)
+        Connection: Entered through the Dungeon Hub.
+        Content:
+        Floors: Increasing difficulty levels from Floor I to VII.
+        Bosses: Unique bosses like Bonzo, Scarf, The Professor, Thorn, Livid, Sadan, and Necron.
+        Classes: Tank, Healer, Mage, Berserk, and Archer.
+        Loot: Dungeon-specific gear and rare drops.
+        15. Garden
+        Connection: Attached to the Private Island; accessed through Sam NPC.
+        Content:
+        Customizable farming plots for each crop type.
+        Crop Upgrades: Milestones and upgrades for increased efficiency.
+        Visitors: NPCs that offer trades and quests.
+        Presets: Templates for building farms quickly.
+        16. Special Event Areas
+        Spooky Festival
+        Connection: Occurs every Skyblock year; no specific island but affects existing areas.
+        Content:
+        Candy Collection: From killing mobs.
+        Exclusive Items: Purchased with collected candies.
+        Winter Island
+        Connection: During the Season of Jerry event.
+        Content:
+        Frosty the Snowman: Boss fight event.
+        Ice Fishing: For exclusive winter items.
+        Rewards: Winter-themed gear and cosmetics.
+        1
+        Island Connections Overview
+        Private Island ↔ Hub Island: Central connection point.
+        Hub Island → Other Islands: Portals or NPCs leading to all major islands.
+        Progression Path:
+        Mining: Coal Mine → Gold Mine → Deep Caverns → Dwarven Mines → Crystal Hollows.
+        Combat: Graveyard → Spider's Den → The End → Crimson Isle.
+        Farming: Farm Area → The Barn → Mushroom Desert → Garden.
+        Foraging: Forest → The Park.
+        Dungeons: Hub → Dungeon Hub → The Catacombs.
+        ___________
+        Skills:
+            Mining {skills['Mining']}
+            Farming {skills['Farming']}
+            Combat {skills['Combat']}
+            Enchanting {skills['Enchanting']}
+            Dungeoneering {skills['Dungeoneering']}
+            Fishing {skills['Fishing']}
+            Foraging {skills['Foraging']}
+            Alchemy {skills['Alchemy']}
+            Heart of the Mountain (Dwarven mines only) {skills['Heart of the Mountain']}
+            
+        IF A PLAYER LEVELS UP A SKILL TELL THEM USING FORMAT: Skill Level Up: ____ (insert the skill), ABOVE ARE CURRENT PLAYER LEVELS
+        ___________
+        below is a summary of past player decisions, ensure continuity.
+        """
+    )
+  
+    changing_context = ""
+    context = base_context + past_events_context + changing_context
+    
+    print("Where are you? You wake up and see that you are on an island, floating in the sky. You see a tree to your left and a large wooden chest to your right. Accross the gap you see man, a mining construct, and a swirling portal. What do you do?")
+    
+
+    while True:
+        
+        # Update changing context based on counter value
+        if counter <= 5:
+            changing_context = "\nThe user thinks that they are in the game, give all actions as if they are themselves performing them"
+        elif counter <= 10:
+            changing_context = "\nagnowledge, discreetly that the user is in fact playing the game, but only vaguely. occasionally comment that it is the character, not the user themsevles performing an action. use your context"
+        elif counter <= 20:
+            changing_context = "\nevery once in a while agnolwedge the negative side effects of gaming, mention every once in a while of wrist pain or eye strain. Also choose one to mention: Homework that needs to be done, a friend get together that continuing to play will make you miss, a brother who wants to hang out but can't if you continue to play."
+        elif counter <=50:
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels."
+        elif counter == 51:
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels." + " Mention that the player can stop playing if they wish, they just have to ask."
+        else:
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels."
+        if counter == 6:
+            print("You can check you skill levels by typing 'skills', remmember to level up and explore the world!")
+        counter += 1
+        # Summarize the conversation history if it gets too long
+        if len(conversation_history) > 5:
+            history_to_summarize = "\n".join(conversation_history[:-5])
+            past_events_context = summarize_history(history_to_summarize)
+            conversation_history = conversation_history[-5:]
+        
+        context = base_context + changing_context + "\n" + past_events_context + "\n" + "\n".join(conversation_history)
+        
+        # Get player's input
+        player_input = input("What would you like to do? ")
+        if (is_status_input(player_input)):
+            print_status_screen()
+        else:
+            #ending shit
+            if get_response_from_llm("if the following text the player wants to stop playing or any language that they no longer wish to continue playing the game, return quit",player_input.lower()) in ["quit", "exit"]:
+                badThings = [f"Instead of going to bed at a reasonable time, you ***HERE***. When you get to school the next day you do a little worse on a in class assignment that you should.",f"You had a bunch of homework to do tonight, but you don't want to think about as it's stressing you out, so intead you ***HERE***. ",f"You had a big day, you were up super late but before you go to bed you NEED to play at least an hour. You decide to ***HERE***. The next morning when you wake up, only 4 hours later you realize how bad you screwed up. It's ok, you take your ADHD medication, a stimulant, and forces you awake and makes you feel like you have energy.",f"Its been a couple of nights of bad sleep but this puts you over the edge and you can barely peel youself out of bed after ***HERE*** all night long. Because of this you don't focus super well in class the next day. But, even worse you can feel, your medication becoming less effective, but its enough to keep you going for now.",f"As you finished ***HERE*** you see the sun spill into your room through your curtains, you have barely slep for the last month, you take your pills as you get ready to head to school, as you step into class, the flourecent lights make your eyes ache and you can tell that it is not going to be a good day. As you sit down you realize that you are barely able to keep your eyes open, and then, you're sleeping. The teacher notices, of course she does, you're sleeping in the front row. She pulls you aside after class, she asks, \"Is everything ok?\". What can you even say back?"]
+                
+                if (len(non_abridged_convo_history)<= 6):
+                    list_zero = ' '.join(non_abridged_convo_history[:len(non_abridged_convo_history)-1])
+                    four_lists = [list_zero]
+                if (len(non_abridged_convo_history)<= 11):
+                    list_zero = ' '.join(non_abridged_convo_history[:6])
+                    list_one = ' '.join(non_abridged_convo_history[6:len(non_abridged_convo_history)-1])
+                    four_lists = [list_zero, list_one]
+                if(len(non_abridged_convo_history)<= 21):
+                    list_zero = ' '.join(non_abridged_convo_history[:6])
+                    list_one = ' '.join(non_abridged_convo_history[6:11])
+                    list_two = ' '.join(non_abridged_convo_history[11:len(non_abridged_convo_history)-1])
+                    four_lists = [list_zero, list_one, list_two]
+                if(len(non_abridged_convo_history) > 21):
+                    list_zero = ' '.join(non_abridged_convo_history[:6])
+                    list_one = ' '.join(non_abridged_convo_history[6:11])
+                    list_two = ' '.join(non_abridged_convo_history[11:21])
+                    list_three = ' '.join(non_abridged_convo_history[21:len(non_abridged_convo_history)-1])
+                    four_lists = [list_zero, list_one, list_two, list_three]
+                    #add some note of finality, making sure that the player does not try and play more
+                    #there should be a bit of an "ending" depending on which time you end at as kind of a end to that playthough
+                count = 0
+                for list in four_lists:
+                    print(clean_punctuation(get_response_from_llm("Take the following sentence and fit in the actions taken by the player into the following sentence. demarkated by three astrixs is where the sentance allows for the addition of the player actions. be breif in the summary of player actions, just state the action, do not comment on it. SENTANCE: " + badThings[count] + "and here is the PLAYER ACTIONS", list)))
+                    count += 1
+                    if count == 3:
+                        print("""You have played for too long by yourself. Please get off. """)
+                        time.sleep(2)
+                        print("________________________________________________________________")
+                        time.sleep(1)
+                        print("""Hi, thanks for playing. I hope you enjoyed playing my game. While games can be amazing and imagination-provoking, 
+                            friendship-building tools that allow us to have fun and connect with others, playing too much can cause great harm 
+                            to both you and the people around you. This was it, the end of the road for me. I remember the moment of having to 
+                            talk to my teacher about why I was falling asleep in class, trying to rationalize to her that I was in fact just too 
+                            tired from doing schoolwork and extra-curricular activities and not that I would spend hours and hours playing videogames 
+                            deep into the night. """)
+                        time.sleep(1)
+                        print("\n")
+                        print("The game you have just been 'playing' is a copy of the one that I played when I was younger and that had me wrapped me around its finger. \nWhile it is difficult to fully translate the gameplay to you I hope that you can understand what it feels to be swept into a magical world unable to grasp the consequences of playing. \nBut there are real damages, including higher levels of depression, worse acedemic preformance, and conduct problems (" + link('https://akjournals.com/view/journals/2006/3/1/article-p27.xml') + ").")
+                        print("At the end of the day, in my experience, what people need when handling video game addiction in their younger years is understanding of consequences, help corelating consequences to actions, and a stable figure who can listen without judging.")
+                break
+
+            
+            
+            # Generate the next part of the game using LLM
+            response = get_response_from_llm(context, player_input)
+            print(response)
+
+            # Update conversation history with player's input and LLM response for prompt chaining
+            conversation_history.append(f"Player: {player_input}\nNarrator: {response}")
+            non_abridged_convo_history.append(f"Player: {player_input}\nNarrator: {response}")
+
+
+if __name__ == "__main__":
+    main()
