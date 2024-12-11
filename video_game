@@ -523,6 +523,8 @@ def main():
                     #there should be a bit of an "ending" depending on which time you end at as kind of a end to that playthough
                 count = 0
                 print("______________________________")
+                print("The Consequences:")
+                print("______________________________")
                 for list in four_lists:
                     print(clean_punctuation(get_response_from_llm("Take the following sentence and fit in the actions taken by the player into the following sentence. demarkated by three astrixs is where the sentance allows for the addition of the player actions. be breif in the summary of player actions, just state the action, do not comment on it. SENTANCE: " + badThings[count] + "and here is the PLAYER ACTIONS", list)))
                     count += 1
