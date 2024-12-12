@@ -6,7 +6,7 @@ import re
 import time
 import difflib
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "API KEY HERE"
 
 client = OpenAI()
 #final
