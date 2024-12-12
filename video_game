@@ -373,11 +373,11 @@ def main():
         elif counter <= 20:
             changing_context = "\nevery once in a while agnolwedge the negative side effects of gaming, mention every once in a while of wrist pain or eye strain. Also choose one to mention: Homework that needs to be done, a friend get together that continuing to play will make you miss, a brother who wants to hang out but can't if you continue to play."
         elif counter <=50:
-            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels."
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels."
         elif counter == 51:
-            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels." + " Mention that the player can stop playing if they wish, they just have to ask to stop playing."
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels." + " Mention that the player can stop playing if they wish, they just have to ask to stop playing."
         else:
-            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. also sneak in mentions of how actions might be taking place late at night, but through descriptions, such as the amount of light in the room or how tired the player feels."
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels."
         if counter == 6:
             print("You can check you skill levels by typing 'skills', remmember to level up and explore the world!")
         counter += 1
