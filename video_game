@@ -360,7 +360,7 @@ def main():
     changing_context = ""
     context = base_context + past_events_context + changing_context
     
-    print("Where are you? You wake up and see that you are on an island, floating in the sky. You see a tree to your left and a large wooden chest to your right. Accross the gap you see man, a mining construct, and a swirling portal. What do you do?")
+    print("Where are you? You wake up and see that you are on an island, floating in the sky. You see a tree to your left and a large wooden chest to your right. Across the gap, you see man, a mining construct, and a swirling portal. What do you do?")
     
 
     while True:
