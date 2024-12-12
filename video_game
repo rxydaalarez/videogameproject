@@ -372,12 +372,12 @@ def main():
             changing_context = "\nagnowledge, discreetly that the user is in fact playing the game, but only vaguely. occasionally comment that it is the character, not the user themsevles performing an action. use your context"
         elif counter <= 20:
             changing_context = "\nevery once in a while agnolwedge the negative side effects of gaming, mention every once in a while of wrist pain or eye strain. Also choose one to mention: Homework that needs to be done, a friend get together that continuing to play will make you miss, a brother who wants to hang out but can't if you continue to play."
-        elif counter <=50:
+        elif counter <=35:
             changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels."
         elif counter == 51:
             changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels." + " Mention that the player can stop playing if they wish, they just have to ask to stop playing."
         else:
-            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels."
+            changing_context = "\nmention with moderate strength about the negative side effects of gaming, increasing the severity from what was mentioned before. describe how actions might be taking place late at night, such as the amount of light in the room or how tired the player feels. Sometimes, when giving the player the choice in what to do next, present them with a hint that they are facing the negative repercussions of gaming in the real world."
         if counter == 6:
             print("You can check you skill levels by typing 'skills', remmember to level up and explore the world!")
         counter += 1
@@ -402,18 +402,18 @@ def main():
                     list_zero = ' '.join(non_abridged_convo_history[:len(non_abridged_convo_history)-1])
                     four_lists = [list_zero]
                     end_count = 1
-                if (len(non_abridged_convo_history)<= 11):
+                elif (len(non_abridged_convo_history)<= 11):
                     list_zero = ' '.join(non_abridged_convo_history[:6])
                     list_one = ' '.join(non_abridged_convo_history[6:len(non_abridged_convo_history)-1])
                     four_lists = [list_zero, list_one]
                     end_count = 2
-                if(len(non_abridged_convo_history)<= 21):
+                elif(len(non_abridged_convo_history)<= 21):
                     list_zero = ' '.join(non_abridged_convo_history[:6])
                     list_one = ' '.join(non_abridged_convo_history[6:11])
                     list_two = ' '.join(non_abridged_convo_history[11:len(non_abridged_convo_history)-1])
                     four_lists = [list_zero, list_one, list_two]
                     end_count = 3
-                if(len(non_abridged_convo_history) > 21):
+                elif(len(non_abridged_convo_history) <= 35):
                     list_zero = ' '.join(non_abridged_convo_history[:6])
                     list_one = ' '.join(non_abridged_convo_history[6:11])
                     list_two = ' '.join(non_abridged_convo_history[11:21])
@@ -422,6 +422,13 @@ def main():
                     end_count = 4
                     #add some note of finality, making sure that the player does not try and play more
                     #there should be a bit of an "ending" depending on which time you end at as kind of a end to that playthough
+                elif(len(non_abridged_convo_history) >= 36):
+                    list_zero = ' '.join(non_abridged_convo_history[:6])
+                    list_one = ' '.join(non_abridged_convo_history[6:11])
+                    list_two = ' '.join(non_abridged_convo_history[11:21])
+                    list_three = ' '.join(non_abridged_convo_history[21:36])
+                    list_four = ' '.join(non_abridged_convo_history[36:])
+                    four_lists[list_zero, list_one, list_two, list_three, list_four]
                 count = 0
                 print("______________________________")
                 print("The Consequences:")
@@ -429,7 +436,7 @@ def main():
                 for list in four_lists:
                     print(clean_punctuation(get_response_from_llm("Take the following sentence and fit in the actions taken by the player into the following sentence. demarkated by three astrixs is where the sentance allows for the addition of the player actions. be breif in the summary of player actions, just state the action, do not comment on it. SENTANCE: " + badThings[count] + "and here is the PLAYER ACTIONS", list)))
                     count += 1
-                    if count == 3:
+                    if count == 5:
                         print("""You have played for too long by yourself. Please get off. """)
                         time.sleep(2)
                         print("______________________________")
@@ -452,7 +459,7 @@ def main():
                         print("The game you have just been 'playing' is a copy of the one I played when I was younger, which had me wrapped around its finger. \nWhile it is difficult to fully translate the gameplay to you, I hope that you can understand what it feels to be swept into a magical world, unable to grasp the consequences of playing. \nBut there are real damages, including higher levels of depression, worse academic performance, and conduct problems (" + link('https://akjournals.com/view/journals/2006/3/1/article-p27.xml') + ").")
                         print("At the end of the day, in my experience, what people need when handling video game addiction in their younger years is an understanding of the consequences. They need help correlating consequences to actions and a stable figure who can listen without judging.")
                         print("\n\nIf you want to learn more about how to both connect with your child through video games and ensure that they do not fall into the same traps I did here is a good resource to get started: " + link('https://getkidas.com/the-essential-guide-to-online-gaming-safety-for-parents-protecting-your-kids-online/') + ". For more information about setting healthy gaming schedules here is a good article by a reputable institution specializing in children's mental health " + link('https://childmind.org/article/healthy-limits-on-video-games/') + ".")
-                if end_count == 3:
+                if end_count <= 4:
                     print("While you avoided the worst effects of playing, you still have caused harm to youself. If you had played even slightly longer you could have experienced serious consequences.")
                     if "y" in input("Would you like to skip playing again and read the final remarks? \n Y/N").lower():
                                 print("______________________________")
